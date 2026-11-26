@@ -1,0 +1,16 @@
+{
+  "experiments": [
+    {
+      "id": "EXP-001",
+      "flag": "checklist_first",
+      "flagsmith_experiment": 816,
+      "hypothesis": "Showing the checklist before the countdown makes more visitors tick their first item, because the next action is visible without scrolling.",
+      "metric": "checklist_item_checked",
+      "status": "awaiting approval",
+      "log": [
+        { "at": "2026-11-26", "what": "Flag and experiment created as a dark draft (0% rollout) by the flagsmith-experiment skill." },
+        { "at": "2026-11-26", "what": "Found that Flagsmith applies a draft's split to live traffic; changed the skill so drafts stay at 0% until an approved start." }
+      ]
+    }
+  ]
+}

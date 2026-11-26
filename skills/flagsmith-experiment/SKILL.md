@@ -33,10 +33,10 @@ Each prints one compact `key=value` line. Do not call `flagsmith ... --json` wit
    - `trackEvent('<event>')` where success happens;
    - flush on exit for server and script SDKs.
    See `references/sdk.md` for each language. Event names are case-sensitive.
-7. `bash scripts/create-experiment.sh <flag> <event> "<hypothesis>" [rollout_pct]` → creates the metric and the experiment (not started). Prints `experiment_id`.
+7. `bash scripts/create-experiment.sh <flag> <event> "<hypothesis>" [rollout_pct]` → creates the metric and the experiment as a dark draft (0% rollout; Flagsmith would otherwise split live traffic before the start). Prints `experiment_id`.
 
 ## Phase 3: Run
-8. `bash scripts/start.sh <experiment_id>` (approval-gated). Starting locks the flag.
+8. `bash scripts/start.sh <experiment_id>` (approval-gated). Starts the experiment, then raises the rollout to the target. Starting locks the flag.
 9. If the user wants test traffic, write a short script that makes a few hundred identities, gets the flag for each and tracks the event for some, then flushes.
 10. `bash scripts/results.sh <experiment_id>` → one line per variant (n, conversions, rate, lift, 95% CI, win probability) and a `verdict=` line. It refreshes at most every 5 minutes. Act only on `verdict=ship:<key>`. For `srm_warning`, report and stop. For `collecting` or `inconclusive`: with simulated traffic, send more users and re-check; with real traffic, report the lines and wait.
 

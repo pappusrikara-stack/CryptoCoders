@@ -32,6 +32,8 @@ Measured on the same task with Claude Code headless ([bench/RESULTS.md](bench/RE
 ## Verified against live Flagsmith Cloud (2.295.2, CLI v2.0.0)
 - [x] Every script runs end to end in a real environment: create → approval gate → start → results → approval gate → ship → rollback → reference check → archive
 - [x] Ending an experiment: `POST .../experiments/<id>/complete/` with `{"rollout_decision":"variant","rollout_variant":<id>}` or `{"rollout_decision":"control"}`. Not in the docs; found by probing. Completing with a variant rolls it out to 100% in the same call.
+- [x] A draft experiment's split applies to live traffic as soon as it is created (before start). The skill therefore creates drafts at 0% rollout and raises the rollout via the undocumented `PATCH .../experiments/<id>/rollout/` only after an approved start.
+- [x] If the environment's name can't be confirmed, the scripts treat it as production (fail-safe)
 - [x] `flag update` needs `--yes` without a TTY, so scripts add it only after the skill's own approval gate
 - [x] Free Cloud plan supports experiments with the managed warehouse
 - [x] Results payload with real data: `results.sh` prints one line per variant plus a `verdict=` line (tested with 400 and 1000 simulated users)

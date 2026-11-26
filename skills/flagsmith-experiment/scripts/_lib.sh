@@ -35,7 +35,8 @@ ENV_KEY="$(env_key)"
 ENV_NAME="$(fs environment get "$ENV_KEY" --jq '.name' 2>/dev/null || echo unknown)"
 API="api/v1/environments/$ENV_KEY"
 
-is_prod() { echo "$ENV_NAME" | grep -qiE '(^|[^a-z])(prod|production|live|main)([^a-z]|$)'; }
+# Fail safe: if the environment's name can't be confirmed, treat it as production.
+is_prod() { [ "$ENV_NAME" = unknown ] || echo "$ENV_NAME" | grep -qiE '(^|[^a-z])(prod|production|live|main)([^a-z]|$)'; }
 
 # require_approval <action> <target> <one-line summary>
 # Exits 3 with the exact token a human must approve. Production needs a
@@ -57,4 +58,14 @@ snapshot() {
   fs flag get "$f" --jq '"enabled=\(.enabled) weights=\([.variants[]|"\(.key)=\(.weight)"]|join(","))"' >"$file"
   audit "snapshot $f -> $file"
   echo "bash scripts/rollback.sh $f $file"
+}
+
+# rollout_body <flag> <pct>: experiment rollout JSON, variants split evenly with control.
+rollout_body() {
+  local f="$1" pct="$2" ids mv="" share
+  ids=($(fs feature variant list "$f" --jq '.[].id'))
+  [ ${#ids[@]} -ge 1 ] || die "flag $f has no variants"
+  share=$(( 100 / (${#ids[@]} + 1) ))
+  for id in "${ids[@]}"; do mv="$mv{\"multivariate_feature_option\":$id,\"percentage_allocation\":$share},"; done
+  printf '{"enabled":true,"rollout_percentage":%s,"feature_state_value":{"type":"string","value":"control"},"multivariate_feature_state_values":[%s]}' "$pct" "${mv%,}"
 }

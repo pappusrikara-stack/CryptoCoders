@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toggle Wars: Submission Helper</title>
+<meta name="description" content="Countdown and submission checklist for the Toggle Wars Flagsmith hackathon.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Toggle Wars · Flagsmith Experimentation Hackathon</p>
+    <h1>Ship your submission on time.</h1>
+    <p class="lede">A countdown in your own time zone and the checklist the rules ask for. Your ticks stay in this browser.</p>
+  </header>
+
+  <div id="blocks">
+    <section id="countdown" class="card" aria-labelledby="cd-title">
+      <h2 id="cd-title">Submissions close in</h2>
+      <div class="clock" role="timer" aria-live="off">
+        <div><span id="d">–</span><small>days</small></div>
+        <div><span id="h">–</span><small>hours</small></div>
+        <div><span id="m">–</span><small>min</small></div>
+        <div><span id="s">–</span><small>sec</small></div>
+      </div>
+      <p class="muted">Deadline: <strong id="local-deadline">Nov 29, 8:00 PM IST</strong> (your time). Late entries aren't accepted.</p>
+    </section>
+
+    <section id="checklist" class="card" aria-labelledby="cl-title">
+      <h2 id="cl-title">Submission checklist <span id="progress" class="pill">0/7</span></h2>
+      <ul id="items"></ul>
+    </section>
+  </div>
+
+  <footer>
+    <p>This page A/B tests itself with <a href="https://flagsmith.com">Flagsmith</a>: an AI agent proposes changes, a human approves them, and the winners ship.
+      <a href="notebook.html">Read the Lab Notebook →</a></p>
+    <p class="muted">Not affiliated with WeMakeDevs or Flagsmith. Built by team CryptoCoders. Official rules: <a href="https://www.wemakedevs.org/hackathons/flagsmith/rules">wemakedevs.org</a></p>
+  </footer>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>
