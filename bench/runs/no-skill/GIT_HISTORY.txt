@@ -1,0 +1,15 @@
+## branches
+* main
+
+## log (all branches)
+
+7c2e9ff demo shop
+
+ .gitignore     |  2 ++
+ flagsmith.json |  5 +++++
+ package.json   |  1 +
+ server.js      | 24 ++++++++++++++++++++++++
+ 4 files changed, 32 insertions(+)
+
+## uncommitted
+ M server.js

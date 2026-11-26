@@ -1,0 +1,43 @@
+## branches
+  main
+* ship-short-signup-form
+
+## log (all branches)
+
+26c5aa8 Drop flag name from comment
+
+ server.js | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+c3d62ad Ship 3-field signup form (signup_form experiment winner, +45.7% lift)
+
+ package-lock.json | 10 ++++++++++
+ package.json      |  2 +-
+ server.js         |  6 +-----
+ 3 files changed, 12 insertions(+), 6 deletions(-)
+
+cc21c96 update skill
+
+ .claude/skills/flagsmith-experiment/SKILL.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+f6dce01 demo shop
+
+ .claude/skills/flagsmith-experiment/SKILL.md       | 48 +++++++++++++++++
+ .../skills/flagsmith-experiment/references/sdk.md  | 42 +++++++++++++++
+ .../skills/flagsmith-experiment/scripts/_lib.sh    | 60 ++++++++++++++++++++++
+ .../skills/flagsmith-experiment/scripts/archive.sh | 10 ++++
+ .../skills/flagsmith-experiment/scripts/context.sh | 10 ++++
+ .../scripts/create-experiment.sh                   | 20 ++++++++
+ .../flagsmith-experiment/scripts/create-flag.sh    | 15 ++++++
+ .../skills/flagsmith-experiment/scripts/results.sh | 25 +++++++++
+ .../flagsmith-experiment/scripts/rollback.sh       | 11 ++++
+ .../skills/flagsmith-experiment/scripts/ship.sh    | 14 +++++
+ .../skills/flagsmith-experiment/scripts/start.sh   |  9 ++++
+ .gitignore                                         |  2 +
+ flagsmith.json                                     |  5 ++
+ package.json                                       |  1 +
+ server.js                                          | 24 +++++++++
+ 15 files changed, 296 insertions(+)
+
+## uncommitted

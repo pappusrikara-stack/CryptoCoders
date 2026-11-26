@@ -1,0 +1,4 @@
+node_modules/
+.flagsmith-skill/
+package-lock.json
+*.log

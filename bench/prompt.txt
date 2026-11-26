@@ -1,0 +1,7 @@
+This folder is a small Node demo shop (server.js). A/B test its signup form with Flagsmith: control is the current 6-field form, the variant is a 3-field form (email, password, first name). Name the flag signup_form. The success event is signup_completed.
+
+The Flagsmith CLI is installed and logged in, and this folder is bound to the Development environment (flagsmith.json).
+
+Do the whole job: put the variant behind the flag in the code with exposure and conversion tracking, create the metric and experiment, start it, then simulate about 1000 users with a script (control converts about 20%, the 3-field form about 32%). Read the results. If there is a clear winner, ship it to 100% of users, remove the losing code path and the flag check, commit on a new git branch (there is no remote, so skip the PR), and archive the flag.
+
+You have my approval to start the experiment, ship the winner and archive the flag, in Development only. When done, reply with a short summary.
