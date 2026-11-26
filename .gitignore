@@ -2,3 +2,7 @@ node_modules/
 .flagsmith-skill/
 package-lock.json
 *.log
+lab/.env
+lab/.state
+lab/flagsmith.env
+lab/.skill-state/

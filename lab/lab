@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# Flagsmith Lab: self-hosted Flagsmith + Experimentation in one command.
+#
+#   ./lab/lab up       start Flagsmith and set it up (admin, org, project, environments,
+#                      experiment warehouse, CLI key). Safe to run again.
+#   ./lab/lab status   what's running, and the URLs and keys you need
+#   ./lab/lab env      print `export` lines for the Flagsmith CLI (eval "$(./lab/lab env)")
+#   ./lab/lab dash     live terminal dashboard of flags and experiments
+#   ./lab/lab down     stop (data kept)
+#   ./lab/lab reset    stop and delete all data
+#
+# Needs: Docker (with Compose v2), bash, curl. Node is only needed for `dash`.
+set -euo pipefail
+LAB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENVF="$LAB/.env"          # generated secrets (gitignored)
+STATE="$LAB/.state"       # what bootstrap created (gitignored)
+CLIENV="$LAB/flagsmith.env"  # CLI credentials (gitignored, mode 600)
+
+say()  { printf '\033[1m▸ %s\033[0m\n' "$*"; }
+die()  { printf '\033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
+rand() { head -c "${1:-24}" /dev/urandom | od -An -tx1 | tr -d ' \n'; }
+dc()   { docker compose --project-directory "$LAB" -f "$LAB/docker-compose.yml" --env-file "$ENVF" "$@"; }
+# jf <json> <field>: first value of "field" (string or number) from compact JSON.
+jf()   { sed -n "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"\{0,1\}\([^\",}]*\).*/\1/p" <<<"$1" | head -1; }
+
+load() { [ -f "$ENVF" ] && . "$ENVF"; [ -f "$STATE" ] && . "$STATE"; PORT="${LAB_PORT:-8000}"; URL="http://localhost:$PORT"; }
+
+# api <method> <path> [json] : call the Admin API with the admin's session token.
+api() {
+  local m="$1" p="$2" body="${3:-}" out code
+  out="$(curl -sS -w '\n%{http_code}' -X "$m" "$URL/api/v1/$p" -H 'Content-Type: application/json' \
+    ${TOKEN:+-H "Authorization: Token $TOKEN"} ${body:+--data "$body"})"
+  code="${out##*$'\n'}"; out="${out%$'\n'*}"
+  [[ "$code" == 2* ]] || die "$m /api/v1/$p -> HTTP $code: ${out:0:300}"
+  printf '%s' "$out"
+}
+
+need_docker() {
+  command -v docker >/dev/null || die "Docker not found. Install Docker Desktop: https://docs.docker.com/get-docker/"
+  docker info >/dev/null 2>&1 || die "Docker is installed but not running. Start Docker Desktop and retry."
+}
+
+wait_healthy() {
+  say "Waiting for Flagsmith at $URL (first start pulls images and runs migrations; can take a few minutes)"
+  for _ in $(seq 1 120); do
+    curl -fsS "$URL/health/liveness/" >/dev/null 2>&1 && { say "Flagsmith is up"; return; }
+    sleep 3
+  done
+  dc logs --tail 40 flagsmith; die "Flagsmith didn't become healthy in 6 minutes (logs above)."
+}
+
+bootstrap() {
+  [ -f "$STATE" ] && { say "Already set up (delete with: ./lab/lab reset)"; return; }
+  local email="admin@lab.local" pass; pass="$(rand 12)"
+  say "Creating admin user"
+  api POST auth/users/ "{\"email\":\"$email\",\"password\":\"$pass\",\"re_password\":\"$pass\",\"first_name\":\"Lab\",\"last_name\":\"Admin\",\"superuser\":true}" >/dev/null
+  TOKEN="$(jf "$(api POST auth/login/ "{\"email\":\"$email\",\"password\":\"$pass\"}")" key)"
+  [ -n "$TOKEN" ] || die "login returned no token"
+  say "Creating organisation, project and environments"
+  local org proj dev prod
+  org="$(jf "$(api POST organisations/ '{"name":"Lab"}')" id)"
+  proj="$(jf "$(api POST projects/ "{\"name\":\"Lab Project\",\"organisation\":$org}")" id)"
+  dev="$(jf "$(api POST environments/ "{\"name\":\"Development\",\"project\":$proj}")" api_key)"
+  prod="$(jf "$(api POST environments/ "{\"name\":\"Production\",\"project\":$proj}")" api_key)"
+  say "Connecting the experiment warehouse (events stored in the lab's Postgres)"
+  for e in "$dev" "$prod"; do
+    api POST "environments/$e/warehouse-connections/" '{"warehouse_type":"postgres","config":{"source":"flagsmith_database"}}' >/dev/null
+  done
+  say "Creating an admin API key for the Flagsmith CLI"
+  local key; key="$(jf "$(api POST "organisations/$org/master-api-keys/" '{"name":"Flagsmith CLI (lab)","is_admin":true}')" key)"
+  [ -n "$key" ] || die "no master API key returned"
+  local hostvar="FLAGSMITH_API_KEY_localhost_$PORT"
+  umask 077
+  printf 'export FLAGSMITH_API_URL=%s\nexport %s=%s\nexport FLAGSMITH_PROJECT=%s\n' "$URL" "$hostvar" "$key" "$proj" >"$CLIENV"
+  printf 'LAB_ADMIN_EMAIL=%s\nLAB_ADMIN_PASSWORD=%s\nLAB_ORG=%s\nLAB_PROJECT=%s\nLAB_DEV_KEY=%s\nLAB_PROD_KEY=%s\n' \
+    "$email" "$pass" "$org" "$proj" "$dev" "$prod" >"$STATE"
+}
+
+status() {
+  load
+  if curl -fsS "$URL/health/liveness/" >/dev/null 2>&1; then echo "Flagsmith:   running at $URL"; else echo "Flagsmith:   not running (./lab/lab up)"; fi
+  [ -f "$STATE" ] || { echo "Setup:       not done yet"; return; }
+  cat <<EOF
+Dashboard:   $URL  (login: $LAB_ADMIN_EMAIL / $LAB_ADMIN_PASSWORD)
+Project:     Lab Project (id $LAB_PROJECT)
+Development: $LAB_DEV_KEY
+Production:  $LAB_PROD_KEY
+SDK config:  API $URL/api/v1/   events $URL/api/
+CLI:         eval "\$(./lab/lab env)"; flagsmith flag list -e $LAB_DEV_KEY
+EOF
+}
+
+case "${1:-help}" in
+  up)
+    need_docker
+    if [ ! -f "$ENVF" ]; then
+      say "Generating secrets for this machine ($ENVF)"
+      umask 077
+      printf 'LAB_PORT=%s\nLAB_PG_PASSWORD=%s\nLAB_DJANGO_SECRET=%s\nLAB_WAREHOUSE_SECRET=%s\n' \
+        "${LAB_PORT:-8000}" "$(rand 16)" "$(rand 32)" "$(rand 32)" >"$ENVF"
+    fi
+    load
+    say "Starting containers"; dc up -d
+    wait_healthy; bootstrap; echo; status ;;
+  status) status ;;
+  env)    load; [ -f "$CLIENV" ] || die "not set up yet: ./lab/lab up"; cat "$CLIENV" ;;
+  dash)   load; [ -f "$CLIENV" ] || die "not set up yet: ./lab/lab up"; . "$CLIENV"; exec node "$LAB/dash.mjs" "$@" ;;
+  down)   need_docker; load; dc down ;;
+  reset)  need_docker; load; dc down -v; rm -f "$STATE" "$CLIENV"; say "Lab data deleted (secrets in .env kept)" ;;
+  *)      sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

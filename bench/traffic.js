@@ -29,7 +29,13 @@ function envKey() {
 }
 
 async function main() {
-  const client = new Flagsmith({ environmentKey: envKey(), enableEvents: true });
+  // Self-hosted (e.g. the lab): FLAGSMITH_API_URL=http://localhost:8000
+  const base = process.env.FLAGSMITH_API_URL?.replace(/\/$/, '');
+  const client = new Flagsmith({
+    environmentKey: envKey(),
+    enableEvents: true,
+    ...(base && { apiUrl: `${base}/api/v1/`, eventProcessorConfig: { eventsApiUrl: `${base}/api/` } }),
+  });
   const run = Date.now().toString(36);
   const stats = {};
   const users = Number(usersArg);

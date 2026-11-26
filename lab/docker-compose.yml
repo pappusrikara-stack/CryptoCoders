@@ -1,0 +1,62 @@
+# Flagsmith Lab: self-hosted Flagsmith with Experimentation, for local development.
+# Based on https://github.com/Flagsmith/flagsmith/blob/main/docker-compose.yml with:
+#  - secrets generated per machine by `./lab up` (lab/.env), not hard-coded
+#  - experiment events stored in the bundled Postgres (EXPERIMENTATION_ENABLED)
+#  - a healthcheck on the API so `./lab up` knows when it's ready
+name: flagsmith-lab
+
+x-flagsmith-env: &flagsmith-env
+  DATABASE_URL: postgresql://postgres:${LAB_PG_PASSWORD}@postgres:5432/flagsmith
+  USE_POSTGRES_FOR_ANALYTICS: 'true'
+  ENVIRONMENT: production
+  DJANGO_ALLOWED_HOSTS: '*'
+  FLAGSMITH_DOMAIN: localhost:${LAB_PORT:-8000}
+  DJANGO_SECRET_KEY: ${LAB_DJANGO_SECRET}
+  WAREHOUSE_CREDENTIALS_SECRET: ${LAB_WAREHOUSE_SECRET}
+  TASK_RUN_METHOD: TASK_PROCESSOR
+  PROMETHEUS_ENABLED: 'true'
+  EXPERIMENTATION_ENABLED: 'true'
+
+volumes:
+  pgdata:
+
+services:
+  postgres:
+    image: postgres:15.5-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${LAB_PG_PASSWORD}
+      POSTGRES_DB: flagsmith
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -d flagsmith -U postgres']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+      start_period: 20s
+
+  migrate-db:
+    image: docker.flagsmith.com/flagsmith/flagsmith:${LAB_FLAGSMITH_VERSION:-latest}
+    command: [migrate]
+    environment: *flagsmith-env
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  flagsmith:
+    image: docker.flagsmith.com/flagsmith/flagsmith:${LAB_FLAGSMITH_VERSION:-latest}
+    restart: unless-stopped
+    command: [serve]
+    environment: *flagsmith-env
+    ports:
+      - ${LAB_PORT:-8000}:8000
+    depends_on:
+      migrate-db: { condition: service_completed_successfully }
+
+  flagsmith-task-processor:
+    image: docker.flagsmith.com/flagsmith/flagsmith:${LAB_FLAGSMITH_VERSION:-latest}
+    restart: unless-stopped
+    command: [run-task-processor]
+    environment: *flagsmith-env
+    depends_on:
+      migrate-db: { condition: service_completed_successfully }

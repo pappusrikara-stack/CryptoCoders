@@ -1,14 +1,28 @@
-# Toggle Wars, Track 04: `flagsmith-experiment` Agent Skill
+# CryptoCoders: Toggle Wars (Flagsmith Experimentation Hackathon)
 
-An Agent Skill that takes a coding agent through a full Flagsmith experiment:
-hypothesis → flagged variants → metric + experiment → results → winner shipped → dead code removed → flag archived.
+One project with two parts that work together:
+
+| | What | Where |
+|---|---|---|
+| **Flagsmith Lab** (Track 03) | Self-hosted Flagsmith **with Experimentation working**, in one command (`./lab/lab up`), plus a live terminal dashboard of flags and experiments across environments | [`lab/`](lab/README.md) |
+| **`flagsmith-experiment` Agent Skill** (Track 04) | Takes a coding agent from "test whether X beats Y" to the winner shipped, the dead code removed and the flag archived, with approval gates and rollback | [`skills/flagsmith-experiment/`](skills/flagsmith-experiment/SKILL.md) |
+
+The skill runs against Flagsmith Cloud or the self-hosted lab. Quick start:
+```bash
+./lab/lab up                    # self-hosted Flagsmith + experiments, ready in ~2 min
+eval "$(./lab/lab env)"         # point the Flagsmith CLI at it
+./lab/lab dash                  # watch flags and experiments live
+```
 
 ```
+lab/                    Flagsmith Lab: compose file, `lab` command, terminal dashboard
 skills/flagsmith-experiment/
   SKILL.md              ~1k tokens, the whole workflow in 4 phases
   references/sdk.md     per-language snippets, loaded only when editing code
   scripts/              one script per step, each prints one key=value line
+site/                   a live web page that A/B tests itself (submission helper)
 demo-app/               a tiny signup page with no flags (the skill's test subject)
+bench/                  traffic simulator + with/without-skill token benchmark
 ```
 
 ## Safety design
@@ -36,4 +50,6 @@ Measured on the same task with Claude Code headless ([bench/RESULTS.md](bench/RE
 - [x] If the environment's name can't be confirmed, the scripts treat it as production (fail-safe)
 - [x] `flag update` needs `--yes` without a TTY, so scripts add it only after the skill's own approval gate
 - [x] Free Cloud plan supports experiments with the managed warehouse
+- [x] Self-hosted (Flagsmith Lab): full experiment end to end: dark draft, approved start, 1000 users, `verdict=ship:short`, ship, kill switch (`kill.sh`: variant traffic 10/20 → 0/20)
+- [x] Flagsmith's experiment pause keeps serving the variant, so `kill.sh` sets the rollout to 0% first, then pauses
 - [x] Results payload with real data: `results.sh` prints one line per variant plus a `verdict=` line (tested with 400 and 1000 simulated users)

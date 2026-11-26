@@ -17,7 +17,8 @@ Each prints one compact `key=value` line. Do not call `flagsmith ... --json` wit
 - A script that exits `3` printed `NEEDS_APPROVAL: ...`. Show that line to the user, wait for a clear yes, then rerun with the `FS_APPROVE` value it names. Never set `FS_APPROVE` yourself before the user says yes.
 - Never pass `--yes` to `flagsmith` yourself; scripts add it only after the approval gate. Never print API keys.
 - Before any flag change, the script saves a rollback file and prints `rollback=...`. Keep that command in your reply.
-- If something looks wrong mid-experiment (errors, sample ratio warning), run `bash scripts/rollback.sh <feature>` and tell the user.
+- If something looks wrong mid-experiment (errors, sample ratio warning), run `bash scripts/kill.sh <experiment_id>` (everyone back to control, not gated) and tell the user. After shipping, undo with `bash scripts/rollback.sh <flag>`.
+- Self-hosted Flagsmith: export `FLAGSMITH_API_URL` and point the SDK's API and events URLs at it (see `references/sdk.md`).
 
 ## Phase 1: Plan (no changes yet)
 1. Ask, in one message, only what you cannot infer: what to test (control vs variant), the success event, and the environment. Infer the rest from the code.
