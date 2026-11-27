@@ -1,6 +1,11 @@
-# Flagsmith Lab: self-hosted A/B testing in one command
+# Flagsmith Lab: self-hosted A/B testing in one command, and a preflight that catches broken experiments before real users do
 
-Run open-source Flagsmith on your machine with **Experimentation working**, ready for the CLI, the SDKs and coding agents, with no clicking around.
+1. **`./lab/lab up`** runs open-source Flagsmith on your machine (or in CI) with **Experimentation working**, with no clicking around.
+2. **`./lab/lab preflight`** flies your experiment through your *real app* in a headless browser against that throwaway Flagsmith, and tells you if the wiring is broken **before** you launch.
+3. **The GitHub Action** does both on every pull request and comments a report card.
+4. **`./lab/lab dash`** is a live terminal dashboard of flags and experiments across environments.
+
+> The most common way an experiment fails is silent: the event name differs by one letter or one capital, Flagsmith counts zero conversions, and you find out days later. Preflight finds it in 2 minutes.
 
 ```bash
 ./lab/lab up
@@ -38,10 +43,71 @@ The lab does all of it, and running it again is safe.
 | `./lab/lab status` | URLs, keys, dashboard login |
 | `eval "$(./lab/lab env)"` | point the Flagsmith CLI at the lab |
 | `./lab/lab dash` | live terminal dashboard (below) |
+| `./lab/lab preflight [config]` | fly your experiments through your real app (below) |
 | `./lab/lab down` | stop, keep data |
 | `./lab/lab reset` | stop and delete all data |
 
 Needs Docker with Compose v2 (4 GB of memory for Docker), bash and curl. On Windows, use Git Bash or WSL. Node 18+ is only needed for `dash`. Port 8000 by default; set `LAB_PORT=9000` before the first `up` to change it.
+
+## Preflight
+```bash
+./lab/lab preflight            # reads preflight.config.mjs
+```
+For each experiment it:
+1. creates the flag and experiment in the lab and starts it;
+2. **reads your code** to check the metric's event name is actually sent, and suggests the near-miss if it isn't;
+3. **sends simulated visitors through your real app** in headless Chromium, each a fresh browser with its own identity, converting at the rates you set;
+4. **cross-checks the browser against Flagsmith**: exposures recorded per variant, conversions counted, a fair split (sample-ratio test), the variants really render differently, and no page errors;
+5. **estimates the real experiment's size**: users per variant and days at your traffic.
+
+Real output from this repo, with a one-capital typo planted in the event name:
+```
+## ❌ Flagsmith preflight failed
+| ❌ | Code never sends `checklist_item_checked` | did you mean `Checklist_Item_Checked` (in site/experiments.js)? |
+| ✅ | `control`: 34/34 exposures recorded |
+| ❌ | `control`: 0/15 conversions counted | conversions happened in the browser but Flagsmith counted none |
+| ✅ | Fair split (sample-ratio p=0.302) |
+| ✅ | Every variant renders differently | control: countdown>checklist · checklist_first: checklist>countdown |
+📊 3,756 users per variant, about 19 days at 400/day
+```
+Fixed, the same run passes: 57/57 exposures and 26/26 conversions for control, 63/63 and 33/33 for the variant.
+
+### Config
+```js
+// preflight.config.mjs
+export default {
+  app: 'http://localhost:8787/',   // your app, served locally
+  source: ['site'],                // where to look for event names
+  visitors: 120,
+  experiments: [{
+    flag: 'checklist_first', variants: ['checklist_first'], event: 'checklist_item_checked',
+    convertRate: { control: 0.4, checklist_first: 0.5 },
+    async convert(page) { await page.locator('#items input').first().check(); },   // what a conversion is
+    fingerprint: page => page.evaluate(() => document.title),                     // optional: what differs per variant
+    baseline: 0.30, expectedLift: 0.10, dailyVisitors: 400,                      // optional: sample-size estimate
+  }],
+};
+```
+Your app needs two small hooks:
+- When `?fs_api=http://localhost:8000&fs_env=<key>` is present, point the Flagsmith SDK at those, accepting **localhost only**. See [`site/app.js`](../site/app.js), which is 4 lines.
+- Set `<html data-flagsmith="ready">` once the visitor is identified and variants are applied, or set `readySelector` in the config.
+
+## GitHub Action
+```yaml
+# .github/workflows/preflight.yml
+on: pull_request
+permissions: { contents: read, pull-requests: write }
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pappusrikara-stack/CryptoCoders/lab@main
+        with:
+          start: npm start                  # serves your app
+          url: http://localhost:3000/
+```
+Each run starts a **throwaway self-hosted Flagsmith inside the CI job**, which is something Flagsmith Cloud can't do per pull request. It then runs preflight, writes the report card to the job summary, comments it on the PR, and fails the check if anything is broken. No secrets are needed.
 
 ## `./lab/lab dash`
 Example while an experiment is running:
