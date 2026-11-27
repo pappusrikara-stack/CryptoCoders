@@ -1,0 +1,18 @@
+name: Flagsmith preflight
+on:
+  pull_request:
+    paths: ['site/**', 'preflight.config.mjs', 'lab/**', 'skills/**']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Other repos use: pappusrikara-stack/CryptoCoders/lab@main
+      - uses: ./lab
+        with:
+          start: python3 -m http.server 8787 --directory site
+          url: http://localhost:8787/

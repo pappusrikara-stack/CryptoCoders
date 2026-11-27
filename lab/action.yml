@@ -1,0 +1,87 @@
+name: Flagsmith Lab preflight
+description: >
+  Spins up a throwaway self-hosted Flagsmith in the CI run, flies your experiments
+  through your real app in a headless browser, and comments a report card on the PR.
+branding: { icon: flag, color: purple }
+
+inputs:
+  config:
+    description: Preflight config file (relative to the repo root)
+    default: preflight.config.mjs
+  start:
+    description: Command that serves your app in the background (e.g. "npm start")
+    required: true
+  url:
+    description: URL to wait for before preflight starts
+    default: http://localhost:8787/
+  visitors:
+    description: Simulated visitors per experiment
+    default: '120'
+  comment:
+    description: Comment the report card on the pull request
+    default: 'true'
+  github-token:
+    description: Token used to comment on the PR
+    default: ${{ github.token }}
+
+outputs:
+  passed:
+    description: "'true' if every check passed"
+    value: ${{ steps.preflight.outputs.passed }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install the Flagsmith CLI
+      shell: bash
+      run: |
+        curl -fsSL https://get.flagsmith.com | sh -s -- --bin-dir "$HOME/.local/bin" --no-modify-path
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+    - name: Start self-hosted Flagsmith (Flagsmith Lab)
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/lab" up
+
+    - name: Start the app
+      shell: bash
+      env: { START: '${{ inputs.start }}', URL: '${{ inputs.url }}' }
+      run: |
+        nohup bash -c "$START" > "$RUNNER_TEMP/app.log" 2>&1 &
+        for i in $(seq 1 60); do curl -fsS -o /dev/null "$URL" && exit 0; sleep 2; done
+        cat "$RUNNER_TEMP/app.log"; echo "::error::app never answered at $URL"; exit 1
+
+    - name: Install Playwright
+      shell: bash
+      run: |
+        npm install --prefix "$GITHUB_ACTION_PATH" --no-audit --no-fund
+        cd "$GITHUB_ACTION_PATH" && npx playwright install --with-deps chromium
+
+    - name: Preflight
+      id: preflight
+      shell: bash
+      env:
+        PREFLIGHT_VISITORS: ${{ inputs.visitors }}
+        PREFLIGHT_REPORT: ${{ runner.temp }}/preflight.md
+      run: |
+        set +e
+        bash "$GITHUB_ACTION_PATH/lab" preflight "${{ inputs.config }}"
+        code=$?
+        cat "$PREFLIGHT_REPORT" >> "$GITHUB_STEP_SUMMARY"
+        echo "passed=$([ $code -eq 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        exit 0
+
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event_name == 'pull_request'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+      run: |
+        { cat "$RUNNER_TEMP/preflight.md"; echo; echo "<sub>Flagsmith Lab preflight · run ${GITHUB_RUN_ID}</sub>"; } > "$RUNNER_TEMP/comment.md"
+        gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md" --edit-last 2>/dev/null \
+          || gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
+
+    - name: Fail if preflight failed
+      if: steps.preflight.outputs.passed != 'true'
+      shell: bash
+      run: echo "::error::Flagsmith preflight failed - see the report card" && exit 1

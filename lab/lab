@@ -6,6 +6,7 @@
 #   ./lab/lab status   what's running, and the URLs and keys you need
 #   ./lab/lab env      print `export` lines for the Flagsmith CLI (eval "$(./lab/lab env)")
 #   ./lab/lab dash     live terminal dashboard of flags and experiments
+#   ./lab/lab preflight [config]  fly an experiment through your real app first
 #   ./lab/lab down     stop (data kept)
 #   ./lab/lab reset    stop and delete all data
 #
@@ -105,7 +106,11 @@ case "${1:-help}" in
   status) status ;;
   env)    load; [ -f "$CLIENV" ] || die "not set up yet: ./lab/lab up"; cat "$CLIENV" ;;
   dash)   load; [ -f "$CLIENV" ] || die "not set up yet: ./lab/lab up"; . "$CLIENV"; exec node "$LAB/dash.mjs" "$@" ;;
+  preflight)
+    load; [ -f "$CLIENV" ] || die "not set up yet: ./lab/lab up"; . "$CLIENV"; export LAB_DEV_KEY
+    [ -d "$LAB/node_modules/playwright" ] || { say "Installing preflight dependencies (Playwright + Chromium, once)"; npm install --prefix "$LAB" --no-audit --no-fund >/dev/null && (cd "$LAB" && npx playwright install chromium >/dev/null); }
+    shift; exec node "$LAB/preflight.mjs" "$@" ;;
   down)   need_docker; load; dc down ;;
   reset)  need_docker; load; dc down -v; rm -f "$STATE" "$CLIENV"; say "Lab data deleted (secrets in .env kept)" ;;
-  *)      sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *)      sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

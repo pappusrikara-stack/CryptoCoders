@@ -6,3 +6,6 @@ lab/.env
 lab/.state
 lab/flagsmith.env
 lab/.skill-state/
+lab/node_modules/
+lab/.preflight-state/
+lab/.preflight-*.md
