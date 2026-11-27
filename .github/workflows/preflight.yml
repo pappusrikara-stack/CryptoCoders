@@ -1,7 +1,6 @@
 name: Flagsmith preflight
 on:
-  pull_request:
-    paths: ['site/**', 'preflight.config.mjs', 'lab/**', 'skills/**']
+  pull_request:   # every PR: a path filter would skip a fix that makes the PR match main
   workflow_dispatch:
 permissions:
   contents: read
