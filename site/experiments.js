@@ -14,6 +14,6 @@ export const experiments = {
 
 // Events the page sends. Metric definitions in Flagsmith must match these names exactly.
 export const EVENTS = {
-  checked: 'Checklist_Item_Checked', // first tick in a visit (primary metric)
+  checked: 'checklist_item_checked', // first tick in a visit (primary metric)
   completed: 'checklist_completed',  // all items ticked
 };
