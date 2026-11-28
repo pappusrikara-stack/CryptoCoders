@@ -9,3 +9,4 @@ lab/.skill-state/
 lab/node_modules/
 lab/.preflight-state/
 lab/.preflight-*.md
+examples/react-pricing/dist/

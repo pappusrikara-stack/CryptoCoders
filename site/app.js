@@ -2,12 +2,8 @@ import flagsmith from './vendor/flagsmith-12.6.0.mjs';
 import { experiments, EVENTS } from './experiments.js';
 
 // Production client-side key: public by design (it ships in every browser).
-// Flagsmith Lab preflight can point the page at a local self-hosted instance with
-// ?fs_api=http://localhost:8000&fs_env=<key>. Only localhost is accepted.
-const qs = new URLSearchParams(location.search);
-const LAB_API = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(qs.get('fs_api') || '') ? qs.get('fs_api') : null;
-const ENV_KEY = (LAB_API && qs.get('fs_env')) || 'b7eCdvaL2KKRd2FHcxignt';
-const FS_OPTS = LAB_API ? { api: `${LAB_API}/api/v1/`, eventProcessorConfig: { eventsApiUrl: `${LAB_API}/api/` } } : {};
+// No preflight hooks needed: Flagsmith Lab preflight reroutes this traffic to the lab.
+const ENV_KEY = 'b7eCdvaL2KKRd2FHcxignt';
 const DEADLINE = new Date('2026-11-29T20:00:00+05:30');
 
 const ITEMS = [
@@ -75,7 +71,7 @@ function track(name) {
 }
 (async () => {
   try {
-    await flagsmith.init({ environmentID: ENV_KEY, enableEvents: true, ...FS_OPTS });
+    await flagsmith.init({ environmentID: ENV_KEY, enableEvents: true });
     await flagsmith.identify(visitorId());
     for (const [flag, exp] of Object.entries(experiments)) {
       const f = flagsmith.getExperimentFlag(flag); // records the exposure

@@ -70,7 +70,7 @@ Real output from this repo, with a one-capital typo planted in the event name:
 | ✅ | Every variant renders differently | control: countdown>checklist · checklist_first: checklist>countdown |
 📊 3,756 users per variant, about 19 days at 400/day
 ```
-Fixed, the same run passes: 57/57 exposures and 26/26 conversions for control, 63/63 and 33/33 for the variant.
+Fixed, the same run passes: every exposure and conversion accounted for (e.g. 50/50 and 18/18 for control, 70/70 and 34/34 for the variant).
 
 ### Config
 ```js
@@ -88,9 +88,11 @@ export default {
   }],
 };
 ```
-Your app needs two small hooks:
-- When `?fs_api=http://localhost:8000&fs_env=<key>` is present, point the Flagsmith SDK at those, accepting **localhost only**. See [`site/app.js`](../site/app.js), which is 4 lines.
-- Set `<html data-flagsmith="ready">` once the visitor is identified and variants are applied, or set `readySelector` in the config.
+**Your app needs no changes.** Preflight's headless browser reroutes the SDK's Flagsmith Cloud traffic (`edge.api`, `events.api`) to the lab and swaps in the lab's environment key. It reads each visitor's variant from Flagsmith's own identity response. Tested with the plain JS SDK ([`site/`](../site)) and the React SDK ([`examples/react-pricing`](../examples/react-pricing)). If your app sets `<html data-flagsmith="ready">` once variants are applied, preflight uses that as its "ready" signal (optional).
+
+Two classic silent failures it catches, both shown above and both found with no app changes:
+- **The event name doesn't match the metric** (case-sensitive): conversions counted 0/N.
+- **The flag is read without recording an exposure** (`useFlags`/`getValue` instead of `useExperiment`/`getExperimentFlag`): exposures recorded 0/N.
 
 ## GitHub Action
 ```yaml

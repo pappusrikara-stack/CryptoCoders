@@ -15,3 +15,15 @@ jobs:
         with:
           start: python3 -m http.server 8787 --directory site
           url: http://localhost:8787/
+
+  # A stock React app (Flagsmith React SDK), built from scratch, preflighted with no app changes.
+  preflight-react:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./lab
+        with:
+          config: examples/react-pricing/preflight.config.mjs
+          start: cd examples/react-pricing && npm ci && npm run build && npm run preview
+          url: http://localhost:8788/
+          comment: 'false'
