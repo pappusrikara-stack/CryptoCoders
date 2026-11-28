@@ -6,7 +6,7 @@
 > | Track | What to look at | Proof |
 > |---|---|---|
 > | **03 · Build on Open Source Flagsmith** | **[Flagsmith Lab](lab/README.md)**: `./lab/lab up` gives self-hosted Flagsmith with Experimentation in ~80s. `./lab/lab preflight` flies your experiment through your real app in a headless browser and cross-checks what Flagsmith recorded, **with zero changes to your app**. **[A GitHub Action](lab/action.yml)** runs a throwaway self-hosted Flagsmith in CI on every PR and comments a report card. | [PR #1](https://github.com/pappusrikara-stack/CryptoCoders/pull/1): the bot catching a one-capital typo · [React example](examples/react-pricing) |
-> | **04 · Flagsmith Agent Skills** | **[`flagsmith-experiment` skill](skills/flagsmith-experiment/SKILL.md)**: a coding agent goes from "test whether X beats Y" to the winner shipped, the dead code removed and the flag archived, with approval gates, a kill switch and rollback | [Benchmark](bench/RESULTS.md): **48% fewer tokens**, and the agent without it failed |
+> | **04 · Flagsmith Agent Skills** | **[`flagsmith-experiment` skill](skills/flagsmith-experiment/SKILL.md)**: a coding agent goes from "test whether X beats Y" to the winner shipped, the dead code removed and the flag archived, with approval gates, a kill switch and rollback | [Benchmark, 3 runs each](bench/RESULTS.md): **61% fewer tokens**, finished 3/3 vs 1/3 without it |
 
 ## What preflight catches (real output)
 ```
@@ -63,14 +63,14 @@ bench/                  traffic simulator + with/without-skill token benchmark
 
 ## Token efficiency
 Scripts filter every CLI response with `--jq`, so the agent sees one line per step instead of full JSON.
-Measured on the same task with Claude Code headless ([bench/RESULTS.md](bench/RESULTS.md)):
+Measured on the same task with Claude Code headless, 3 runs each ([bench/RESULTS.md](bench/RESULTS.md)):
 
 | | With skill | Without |
 |---|---|---|
-| Finished the job | **Yes** | No |
-| Total tokens | **1.61M** (48% fewer) | 3.10M |
-| Output tokens | **7,964** | 13,127 |
-| Turns / cost | **21 / $0.46** | 35 / $0.73 |
+| Finished the whole job | **3 / 3** | 1 / 3 |
+| Total tokens (avg) | **1.45M** (61% fewer) | 3.74M |
+| Output tokens (avg) | **6,754** | 12,670 |
+| Cost (avg) | **$0.44** | $0.81 |
 
 ## Verified against live Flagsmith Cloud (2.295.2, CLI v2.0.0)
 - [x] Every script runs end to end in a real environment: create → approval gate → start → results → approval gate → ship → rollback → reference check → archive

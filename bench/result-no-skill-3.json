@@ -1,0 +1,183 @@
+{
+  "duration_api_ms": 199564,
+  "stop_reason": "end_turn",
+  "session_id": "<redacted>",
+  "total_cost_usd": 0.6826938,
+  "usage": {
+    "input_tokens": 8,
+    "cache_creation_input_tokens": 2296,
+    "cache_read_input_tokens": 297708,
+    "output_tokens": 1096,
+    "output_tokens_details": {
+      "thinking_tokens": 97
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 2296,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 657,
+        "cache_read_input_tokens": 99959,
+        "cache_creation_input_tokens": 382,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 382
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 70,
+      "outputTokens": 9848,
+      "cacheReadInputTokens": 2921458,
+      "cacheCreationInputTokens": 72982,
+      "webSearchRequests": 0,
+      "costUSD": 0.6826938,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1806,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 72982,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "origin": {
+    "kind": "task-notification",
+    "producer": "session-task",
+    "runId": "0mwzqw98v-dfb8dc3d"
+  },
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "safety_stops": 0,
+  "is_error": false,
+  "num_turns": 3,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "I stopped before shipping. Flagsmith has no results for the experiment, so there is no winner to ship, and the flag is still live.\n\n**Blocker:** the Development environment doesn't store experiment events. `POST /api/v1/events/` returns `This environment does not store events in Flagsmith.`, and the results endpoint returns `{\"results\": null}`. I found no CLI or API setting to turn event storage on. It probably needs enabling in the Flagsmith dashboard or by connecting a data warehouse. If you enable it, I'll re-run the simulation, which will need rerunning anyway because none of its events were stored.\n\n**What's done (Development only):**\n- **Flag:** `signup_form` (id 307812) is multivariate, with `control` as the default and a `short_form` variant at 50%.\n- **Metric:** `signup_completed` (id 1581) is an occurrence metric where higher is better.\n- **Experiment:** `signup_form_3_field` (id 1519) is **running**.\n- **Code:** `flags.js` evaluates the flag and sends the exposure and `signup_completed` events. `server.js` renders the 3-field form for `short_form` and the 6-field form otherwise.\n- **Simulation:** `simulate.js` ran 1000 users. It split 517 control and 483 short_form, with 109 conversions (21.1%) for control and 141 (29.2%) for the short form. That tally is local only, because Flagsmith stored none of the events, so I didn't treat it as a result.\n- **Commit:** all of this is on branch `signup-form-experiment`, commit `c143a33`.\n\n**Not done:**\n- The losing code path and the flag check are still in place.\n- The flag isn't archived.\n- The variant isn't at 100%.\n\n**Unverified:**\n- I guessed the event payload shape, since the endpoint rejected requests before validating the body. It may need adjusting once storage is on.\n- The unrelated `checklist_first` flag was already in the project and I left it alone.",
+  "ttft_ms": 102612,
+  "type": "result",
+  "duration_ms": 120439,
+  "uuid": "<redacted>",
+  "ttft_stream_ms": 101858,
+  "time_to_request_ms": 145,
+  "time_to_request_phases_ms": {
+    "other": 6,
+    "system_prompt": 4,
+    "resume_other": 0,
+    "process_user_input": 5,
+    "input_attachments": 20,
+    "input_hooks": 5,
+    "conversation_append": 2,
+    "transcript_persist": 2,
+    "tool_pool_refresh": 20,
+    "init_message": 4,
+    "init_frame_send": 2,
+    "engine_pickup": 1,
+    "loop_entry": 7,
+    "message_prep": 4,
+    "model_config_wait": 1,
+    "autocompact": 1,
+    "request_announcements": 3,
+    "query_setup": 4,
+    "model_gates": 1,
+    "tool_schema_build": 10,
+    "message_normalization": 20,
+    "client_creation": 3,
+    "request_build": 20
+  },
+  "turn_start_resume_kind": "none",
+  "process_turn_index": 2,
+  "time_to_request_loop_lag_ms": 95,
+  "time_to_request_cpu_ms": 203,
+  "time_to_request_major_faults": 2420,
+  "input_attachments_detail": {
+    "slowest_producer": "deferred_tools_delta",
+    "slowest_producer_ms": 8,
+    "cpu_ms": 15,
+    "major_faults": 267,
+    "setup_ms": 0,
+    "prompt_producers_ms": 0,
+    "ambient_start_ms": 12,
+    "ambient_wait_ms": 7,
+    "render_ms": 0,
+    "producers": 35,
+    "token_counts": 0
+  },
+  "tool_schema_build_detail": {
+    "betas_ms": 2,
+    "waits_ms": 2,
+    "placement_ms": 3,
+    "render_ms": 2,
+    "after_ms": 1,
+    "other_ms": 0,
+    "tools": 15,
+    "new_schemas": 0
+  },
+  "message_normalization_detail": {
+    "before_ms": 0,
+    "normalize_ms": 19,
+    "images_ms": 1,
+    "post_process_ms": 0,
+    "after_ms": 0,
+    "other_ms": 0,
+    "messages": 279,
+    "wire_messages": 69
+  },
+  "request_build_detail": {
+    "records_ms": 0,
+    "system_ms": 1,
+    "headers_ms": 1,
+    "cache_break_record_ms": 8,
+    "plans_ms": 2,
+    "retry_setup_ms": 0,
+    "sent_build_ms": 3,
+    "record_attempt_ms": 5,
+    "other_ms": 0,
+    "sent_build_safety_context_ms": 0,
+    "sent_build_cache_breakpoints_ms": 1,
+    "sent_build_surrogate_scan_ms": 0
+  },
+  "first_content_frame_ms": 101860,
+  "queued_turn_count": 0,
+  "result_index": 3
+}

@@ -1,0 +1,179 @@
+{
+  "duration_api_ms": 58639,
+  "stop_reason": "end_turn",
+  "session_id": "<redacted>",
+  "total_cost_usd": 0.3697396,
+  "usage": {
+    "input_tokens": 24,
+    "cache_creation_input_tokens": 55065,
+    "cache_read_input_tokens": 887316,
+    "output_tokens": 6070,
+    "output_tokens_details": {
+      "thinking_tokens": 447
+    },
+    "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+    },
+    "service_tier": "standard",
+    "cache_creation": {
+      "ephemeral_1h_input_tokens": 55065,
+      "ephemeral_5m_input_tokens": 0
+    },
+    "inference_geo": "global",
+    "iterations": [
+      {
+        "input_tokens": 2,
+        "output_tokens": 447,
+        "cache_read_input_tokens": 81943,
+        "cache_creation_input_tokens": 481,
+        "cache_creation": {
+          "ephemeral_5m_input_tokens": 0,
+          "ephemeral_1h_input_tokens": 481
+        },
+        "type": "message"
+      }
+    ],
+    "speed": "standard",
+    "fallback_credit": null
+  },
+  "modelUsage": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 24,
+      "outputTokens": 6070,
+      "cacheReadInputTokens": 887316,
+      "cacheCreationInputTokens": 55065,
+      "webSearchRequests": 0,
+      "costUSD": 0.3697396,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 447,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 55065,
+      "canonicalModel": "claude-sonnet-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "permission_denials": [],
+  "terminal_reason": "completed",
+  "fast_mode_state": "off",
+  "fast_mode_disabled_reason": "sdk_opt_in_required",
+  "subagent_stats": {
+    "spawned": 0,
+    "requested": {
+      "background": 0,
+      "foreground": 0,
+      "unset": 0
+    },
+    "started_in_background": 0,
+    "max_depth": 0,
+    "spawned_by_subagents": 0,
+    "completed": 0,
+    "failed": 0,
+    "killed": {
+      "parent": 0,
+      "user": 0,
+      "system": 0
+    },
+    "refused": {
+      "depth_limit": 0,
+      "concurrency_limit": 0,
+      "budget": 0
+    },
+    "by_type": {}
+  },
+  "safety_stops": 0,
+  "is_error": false,
+  "num_turns": 15,
+  "subtype": "success",
+  "api_error_status": null,
+  "result": "The 3-field form won clearly, and it's now shipped to 100% in Development. The flag `signup_form` is archived.\n\n- **Result:** the 3-field form converted at 33.1% against 19.1% for the 6-field control (about 1,000 simulated users). Lift was +73.7%, 95% CI [35.1, 112.3]%, and win probability 100%. The results script's verdict was `ship:short_form`. That read was still labelled `final=false`, so it was the interim, not the frozen one.\n- **Code:** the work is on branch `ship-short-signup-form`, in two commits. `server.js` now serves only the 3-field form (email, password, first name). The flag check, the 6-field path and the Flagsmith SDK and tracking are removed. The SDK is gone from `package.json`, and the lockfile I'd generated for it is deleted. There's no PR because there's no remote.\n- **Rollback:** `bash scripts/rollback.sh signup_form .flagsmith-skill/rollback/signup_form-20261128T004844Z.state`. This restores the flag state, but the code on the branch no longer reads the flag.\n- **Audit log:** `.flagsmith-skill/audit.log`.\n- **Not checked:** I never started the server or loaded the page after the cleanup. I only ran `node --check` on `server.js`, which passed.",
+  "ttft_ms": 4954,
+  "type": "result",
+  "duration_ms": 237483,
+  "uuid": "<redacted>",
+  "ttft_stream_ms": 4802,
+  "time_to_request_ms": 2065,
+  "time_to_request_phases_ms": {
+    "other": 43,
+    "system_prompt": 1355,
+    "resume_other": 7,
+    "process_user_input": 9,
+    "input_attachments": 94,
+    "input_hooks": 5,
+    "conversation_append": 3,
+    "transcript_persist": 65,
+    "tool_pool_refresh": 18,
+    "system_prompt_rebuild": 5,
+    "init_message": 143,
+    "init_frame_send": 31,
+    "engine_pickup": 14,
+    "loop_entry": 33,
+    "message_prep": 4,
+    "model_config_wait": 4,
+    "autocompact": 6,
+    "request_announcements": 35,
+    "query_setup": 9,
+    "model_gates": 2,
+    "tool_schema_build": 96,
+    "message_normalization": 17,
+    "client_creation": 10,
+    "request_build": 57
+  },
+  "turn_start_resume_kind": "none",
+  "process_turn_index": 0,
+  "time_to_request_loop_lag_ms": 199,
+  "time_to_request_cpu_ms": 1375,
+  "time_to_request_major_faults": 9126,
+  "input_attachments_detail": {
+    "slowest_producer": "deferred_tools_delta",
+    "slowest_producer_ms": 20,
+    "cpu_ms": 93,
+    "major_faults": 1226,
+    "setup_ms": 19,
+    "prompt_producers_ms": 1,
+    "ambient_start_ms": 45,
+    "ambient_wait_ms": 19,
+    "render_ms": 7,
+    "producers": 40,
+    "token_counts": 0
+  },
+  "tool_schema_build_detail": {
+    "betas_ms": 1,
+    "waits_ms": 18,
+    "placement_ms": 12,
+    "render_ms": 64,
+    "after_ms": 1,
+    "other_ms": 0,
+    "tools": 14,
+    "new_schemas": 14
+  },
+  "message_normalization_detail": {
+    "before_ms": 1,
+    "normalize_ms": 12,
+    "images_ms": 1,
+    "post_process_ms": 2,
+    "after_ms": 1,
+    "other_ms": 0,
+    "messages": 14,
+    "wire_messages": 2
+  },
+  "request_build_detail": {
+    "records_ms": 8,
+    "system_ms": 5,
+    "headers_ms": 3,
+    "cache_break_record_ms": 6,
+    "plans_ms": 4,
+    "retry_setup_ms": 1,
+    "sent_build_ms": 9,
+    "record_attempt_ms": 21,
+    "other_ms": 0,
+    "sent_build_safety_context_ms": 0,
+    "sent_build_cache_breakpoints_ms": 2,
+    "sent_build_surrogate_scan_ms": 0
+  },
+  "first_content_frame_ms": 4803,
+  "queued_turn_count": 0,
+  "result_index": 0
+}
