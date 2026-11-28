@@ -1,29 +1,58 @@
-# CryptoCoders: Toggle Wars (Flagsmith Experimentation Hackathon)
+# CryptoCoders: catch broken A/B tests before your users do
 
-One project with two parts that work together:
+**A/B tests usually fail silently.** One wrong capital in an event name, or a flag read the wrong way, and Flagsmith counts zero results. You find out a week later. We built the tools that catch it in two minutes and let an AI agent run the whole experiment safely, on self-hosted Flagsmith or Flagsmith Cloud.
 
-| | What | Where |
-|---|---|---|
-| **Flagsmith Lab** (Track 03) | Self-hosted Flagsmith **with Experimentation working**, in one command (`./lab/lab up`), plus a live terminal dashboard of flags and experiments across environments | [`lab/`](lab/README.md) |
-| **`flagsmith-experiment` Agent Skill** (Track 04) | Takes a coding agent from "test whether X beats Y" to the winner shipped, the dead code removed and the flag archived, with approval gates and rollback | [`skills/flagsmith-experiment/`](skills/flagsmith-experiment/SKILL.md) |
+> **Judges, start here**
+> | Track | What to look at | Proof |
+> |---|---|---|
+> | **03 · Build on Open Source Flagsmith** | **[Flagsmith Lab](lab/README.md)**: `./lab/lab up` gives self-hosted Flagsmith with Experimentation in ~80s. `./lab/lab preflight` flies your experiment through your real app in a headless browser and cross-checks what Flagsmith recorded, **with zero changes to your app**. **[A GitHub Action](lab/action.yml)** runs a throwaway self-hosted Flagsmith in CI on every PR and comments a report card. | [PR #1](https://github.com/pappusrikara-stack/CryptoCoders/pull/1): the bot catching a one-capital typo · [React example](examples/react-pricing) |
+> | **04 · Flagsmith Agent Skills** | **[`flagsmith-experiment` skill](skills/flagsmith-experiment/SKILL.md)**: a coding agent goes from "test whether X beats Y" to the winner shipped, the dead code removed and the flag archived, with approval gates, a kill switch and rollback | [Benchmark](bench/RESULTS.md): **48% fewer tokens**, and the agent without it failed |
 
-The skill runs against Flagsmith Cloud or the self-hosted lab. Quick start:
+## What preflight catches (real output)
+```
+## ❌ Flagsmith preflight failed
+| ❌ | Code never sends `checklist_item_checked` | did you mean `Checklist_Item_Checked` (in site/experiments.js)? |
+| ✅ | `control`: 34/34 exposures recorded |
+| ❌ | `control`: 0/15 conversions counted | conversions happened in the browser but Flagsmith counted none |
+```
+```
+| ❌ | `control`: 0/49 exposures recorded | the app evaluates the flag without recording an exposure: use getExperimentFlag / useExperiment |
+```
+The second is a stock React app using `useFlags` instead of `useExperiment`. Both were caught with **no code changes** to either app: the headless browser reroutes the SDK's Flagsmith Cloud traffic to the local lab. When the app is correct, every number lines up, e.g. `50/50 exposures`, `18/18 conversions`, a fair split, and both variants really rendering differently.
+
+## Quick start
 ```bash
-./lab/lab up                    # self-hosted Flagsmith + experiments, ready in ~2 min
-eval "$(./lab/lab env)"         # point the Flagsmith CLI at it
-./lab/lab dash                  # watch flags and experiments live
+./lab/lab up                    # self-hosted Flagsmith + experiments, ready in ~80s
+./lab/lab preflight             # fly preflight.config.mjs through your app
+./lab/lab dash                  # live terminal dashboard of flags and experiments
+eval "$(./lab/lab env)"         # point the Flagsmith CLI (and the skill) at the lab
+```
+In CI, add three lines ([lab/README.md#github-action](lab/README.md#github-action)):
+```yaml
+- uses: pappusrikara-stack/CryptoCoders/lab@main
+  with: { start: npm start, url: http://localhost:3000/ }
 ```
 
+## What's in the repo
 ```
-lab/                    Flagsmith Lab: compose file, `lab` command, terminal dashboard
+lab/                    Flagsmith Lab: compose file, `lab` command, preflight, dashboard, GitHub Action
 skills/flagsmith-experiment/
   SKILL.md              ~1k tokens, the whole workflow in 4 phases
   references/sdk.md     per-language snippets, loaded only when editing code
   scripts/              one script per step, each prints one key=value line
-site/                   a live web page that A/B tests itself (submission helper)
+examples/react-pricing/ stock React + Flagsmith React SDK app, preflighted with no changes
+site/                   a live page that A/B tests itself (Toggle Wars submission helper)
 demo-app/               a tiny signup page with no flags (the skill's test subject)
 bench/                  traffic simulator + with/without-skill token benchmark
 ```
+
+## Things we found in Flagsmith along the way
+- **A draft experiment splits live traffic before it's started.** The skill creates drafts at 0% and raises the rollout only after an approved start.
+- **Pausing an experiment keeps serving the variant.** The skill's `kill.sh` sets the rollout to 0% first, then pauses.
+- **Ending an experiment and changing its rollout** use API endpoints that aren't in the docs (`/complete/`, `/rollout/`). We found them by probing and documented them below.
+- **The self-hosting docs say the compose file includes ClickHouse; it doesn't.** The lab uses the documented `flagsmith_database` warehouse instead.
+
+# Agent Skill details (Track 04)
 
 ## Safety design
 - Every CLI call is `--no-input`. The CLI needs `--yes` to change flags without a terminal, so scripts add it only after the skill's own approval gate has passed.

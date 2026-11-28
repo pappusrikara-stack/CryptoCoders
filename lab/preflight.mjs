@@ -43,6 +43,8 @@ async function fsApi(p, method = 'GET') {
   return stdout.trim() ? JSON.parse(stdout) : null;
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// Flagsmith Cloud hosts the SDKs talk to by default; preflight reroutes them to the lab.
+const CLOUD = /^https:\/\/(edge\.api|api|events\.api|realtime)\.flagsmith\.com\//;
 // chi-square goodness of fit, p-value via Wilson–Hilferty approximation
 function srmP(counts) {
   const n = counts.reduce((a, b) => a + b, 0), k = counts.length, e = n / k;
@@ -61,11 +63,13 @@ function sourceStrings(dirs) {
       for (const m of fs.readFileSync(p, 'utf8').matchAll(/['"`]([A-Za-z0-9_.:-]{3,60})['"`]/g))
         if (!out.has(m[1])) out.set(m[1], path.relative(process.cwd(), p).split(path.sep).join('/'));
   } };
-  for (const d of dirs) walk(path.resolve(process.cwd(), d)); // the app's repo, not the action's
+  for (const d of dirs) walk(path.resolve(path.dirname(cfgPath), d)); // relative to the config file
   return out;
 }
 
 // ---- run ---------------------------------------------------------------------------
+try { await fetch(cfg.app); }
+catch { console.error(`✗ Your app isn't answering at ${cfg.app}. Start it first (or fix "app" in ${path.basename(cfgPath)}).`); process.exit(2); }
 const { chromium } = await import('playwright');
 const browser = await chromium.launch();
 const cards = []; let failed = false;
@@ -91,24 +95,48 @@ for (const x of cfg.experiments) {
   log(`${x.flag}: sending ${VISITORS} visitors through ${cfg.app}`);
   const seen = Object.fromEntries(keys.map(k => [k, { visitors: 0, converted: 0, prints: new Set() }]));
   const errors = new Set(); let next = 0;
-  const url = `${cfg.app}${cfg.app.includes('?') ? '&' : '?'}fs_api=${encodeURIComponent(API)}&fs_env=${ENV}`;
-  await Promise.all(Array.from({ length: 4 }, async () => {
+  await Promise.all(Array.from({ length: 6 }, async () => {
     while (next < VISITORS) {
       next++;
       const ctx = await browser.newContext(); const page = await ctx.newPage();
       page.on('pageerror', e => errors.add(e.message.split('\n')[0]));
+      // Zero-change mode: the app keeps talking to "Flagsmith Cloud"; the browser quietly
+      // sends that traffic to the lab instead and swaps in the lab's environment key.
+      let identified, variant = null, eventPosts = 0;
+      const gotIdentity = new Promise(r => (identified = r));
+      await ctx.route(CLOUD, async route => {
+        const req = route.request(), u = new URL(req.url());
+        if (u.hostname.startsWith('realtime.')) return route.abort();
+        const to = (u.hostname.startsWith('events.') ? `${API}/api` : API) + u.pathname + u.search;
+        const oldKey = req.headers()['x-environment-key'];
+        let body = req.postData() ?? undefined;
+        if (body && oldKey) body = body.split(oldKey).join(ENV);
+        try {
+          const res = await route.fetch({ url: to, headers: { ...req.headers(), 'x-environment-key': ENV }, postData: body });
+          if (u.pathname.includes('/identities')) {
+            const flag = (await res.json().catch(() => ({}))).flags?.find(f => f.feature?.name === x.flag);
+            if (flag) { variant = flag.variant || 'control'; identified(); }
+          }
+          if (u.hostname.startsWith('events.')) eventPosts++;
+          await route.fulfill({ response: res });
+        } catch (e) { errors.add(`lab request failed: ${e.message.split('\n')[0]}`); await route.abort(); }
+      });
       try {
-        await page.goto(url);
-        // Wait until the app has identified the visitor and applied variants.
-        await page.waitForSelector(cfg.readySelector || 'html[data-flagsmith="ready"]', { state: 'attached', timeout: 15000 });
-        const variant = (await page.evaluate(f => window.flagsmith.getAllFlags()[f]?.variant, x.flag)) || 'control';
+        await page.goto(cfg.app);
+        // Ready = the app identified the visitor (and set the optional ready marker).
+        await Promise.race([gotIdentity, sleep(15000).then(() => { throw new Error('the app never identified the visitor with Flagsmith (no identities request)'); })]);
+        await page.waitForSelector(cfg.readySelector || 'html[data-flagsmith="ready"]', { state: 'attached', timeout: 2500 }).catch(() => sleep(800));
         const s = seen[variant] ?? (seen[variant] = { visitors: 0, converted: 0, prints: new Set() });
         s.visitors++;
         if (x.fingerprint) s.prints.add(await x.fingerprint(page));
         if (Math.random() < (x.convertRate?.[variant] ?? 0.5)) {
           await x.convert(page, variant); s.converted++;
         }
-        await page.evaluate(() => window.flagsmith.flushEvents?.()).catch(() => {});
+        // Let the SDK send its buffered events: ask it to flush, signal the page is
+        // being hidden, and wait for an events request (SDKs batch every ~10s).
+        const before = eventPosts;
+        await page.evaluate(() => { window.flagsmith?.flushEvents?.(); dispatchEvent(new Event('pagehide')); document.dispatchEvent(new Event('visibilitychange')); }).catch(() => {});
+        for (let t = 0; t < 120 && eventPosts === before; t++) await sleep(100);
         await sleep(300);
       } catch (e) { errors.add(e.message.split('\n')[0]); }
       await ctx.close();
